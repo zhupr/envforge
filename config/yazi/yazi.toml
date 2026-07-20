@@ -1,0 +1,47 @@
+# ============================================================
+# Yazi 配置
+# 安装: cp yazi.toml ~/.config/yazi/yazi.toml
+# ============================================================
+
+[manager]
+show_hidden    = true
+sort_by        = "modified"
+sort_sensitive = false
+sort_reverse   = true
+sort_dir_first = true
+linemode       = "size"
+
+[preview]
+max_width  = 1000
+max_height = 1000
+
+[opener]
+edit = [
+  { run = 'nvim "$@"', block = true, desc = "Neovim" },
+]
+open = [
+  { run = 'open "$@"', desc = "macOS Default" },
+]
+
+[open]
+rules = [
+  { name = "*.md", use = "edit" },
+  { name = "*.lua", use = "edit" },
+  { name = "*.py", use = "edit" },
+  { name = "*.js", use = "edit" },
+  { name = "*.ts", use = "edit" },
+  { name = "*.go", use = "edit" },
+  { name = "*.rs", use = "edit" },
+  { name = "*.json", use = "edit" },
+  { name = "*.toml", use = "edit" },
+  { name = "*.yaml", use = "edit" },
+  { name = "*.yml", use = "edit" },
+  { name = "*.sh", use = "edit" },
+  { name = "*.zsh", use = "edit" },
+  { name = "*", use = "open" },
+]
+
+[plugin]
+prepend_previewers = [
+  { name = "*.md", run = "preview" },
+]

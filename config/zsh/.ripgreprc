@@ -1,0 +1,7 @@
+--smart-case
+--hidden
+--glob=!.git
+--glob=!node_modules
+--glob=!vendor
+--glob=!__pycache__
+--glob=!.venv

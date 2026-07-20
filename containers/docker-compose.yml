@@ -1,0 +1,34 @@
+# =================================================================
+# Dev environment with local disk mounting
+#
+# Usage:
+#   docker compose -f containers/docker-compose.yml up -d
+#   docker compose -f containers/docker-compose.yml exec dev zsh
+# =================================================================
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: containers/Dockerfile
+    container_name: dotfiles-dev
+    stdin_open: true
+    tty: true
+    volumes:
+      # Mount your local projects into the container
+      - ~/projects:/workspace
+      # Persist dotfiles config changes
+      - ../config:/home/dev/dotfiles/config
+      # Persist caches across rebuilds
+      - dotfiles-go-cache:/home/dev/go
+      - dotfiles-vcpkg:/home/dev/.local/share/vcpkg
+      - dotfiles-nvm:/home/dev/.nvm
+      - dotfiles-conda:/home/dev/miniconda3
+    environment:
+      - TERM=xterm-256color
+    working_dir: /workspace
+
+volumes:
+  dotfiles-go-cache:
+  dotfiles-vcpkg:
+  dotfiles-nvm:
+  dotfiles-conda:

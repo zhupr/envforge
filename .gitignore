@@ -1,0 +1,30 @@
+# Machine-specific (don't track)
+config/zsh/.p10k.zsh
+
+# Neovim
+config/nvim/lazy-lock.json
+
+# Caches
+.ruff_cache/
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Backups created by installer
+*.bak.*
+
+# Offline packages (too large for git — manage separately)
+offline/
+
+# nvim log
+*.log

@@ -1,0 +1,10 @@
+# Yazi 快捷键配置
+# 安装: cp keymap.toml ~/.config/yazi/keymap.toml
+
+# 用 Neovim 打开当前文件
+[manager]
+keymap = [
+  { on = ["e"], run = 'nvim "$@"', desc = "Open in Neovim" },
+  { on = ["."], run = "hidden toggle", desc = "Toggle hidden files" },
+  { on = ["<C-g>"], run = "plugin lazygit", desc = "Lazygit" },
+]

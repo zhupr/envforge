@@ -1,0 +1,93 @@
+# ============================================================
+# tmux 配置 - 使用 gpakosz/.tmux 框架
+#
+# 安装方式（见 README.md）：
+#   1. git clone https://github.com/gpakosz/.tmux.git ~/.tmux
+#   2. ln -s -f ~/.tmux/.tmux.conf ~/.tmux.conf
+#   3. cp this_file ~/.tmux.conf.local
+# ============================================================
+# gpakosz/.tmux 的所有配置通过 .tmux.conf.local 覆盖
+# 此文件即 .tmux.conf.local
+
+# --- 通用 ---
+set -g default-terminal "tmux-256color"
+set -ag terminal-overrides ",xterm-256color:RGB"
+set -g history-limit 50000
+set -g mouse on
+set -g focus-events on
+set -g set-clipboard on
+set -sg escape-time 0
+set -g display-time 3000
+
+# 窗口/面板编号从 1 开始
+set -g base-index 1
+setw -g pane-base-index 1
+set -g renumber-windows on
+
+# --- 前缀键 ---
+set -g prefix C-a
+unbind C-b
+bind C-a send-prefix
+
+# --- 面板分割（路径保持一致）---
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+unbind '"'
+unbind %
+
+# --- Neovim 感知的面板导航 ---
+is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
+    | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?|fzf)(diff)?$'"
+
+bind -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
+bind -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
+bind -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
+bind -n 'C-l' if-shell "$is_vim" 'send-keys C-l'  'select-pane -R'
+
+# --- 面板调整大小 ---
+bind -r H resize-pane -L 5
+bind -r J resize-pane -D 5
+bind -r K resize-pane -U 5
+bind -r L resize-pane -R 5
+
+# --- 窗口切换（Alt+数字）---
+bind -n M-1 select-window -t 1
+bind -n M-2 select-window -t 2
+bind -n M-3 select-window -t 3
+bind -n M-4 select-window -t 4
+bind -n M-5 select-window -t 5
+bind -n M-6 select-window -t 6
+bind -n M-7 select-window -t 7
+bind -n M-8 select-window -t 8
+bind -n M-9 select-window -t 9
+
+# --- Yazi 快速打开 ---
+bind y split-window -h -l 40% -c "#{pane_current_path}" 'yazi'
+
+# --- 复制模式 (vi 风格) ---
+setw -g mode-keys vi
+bind -T copy-mode-vi v send -X begin-selection
+bind -T copy-mode-vi C-v send -X rectangle-toggle
+bind -T copy-mode-vi y send -X copy-selection-and-cancel
+bind -T copy-mode-vi Escape send -X cancel
+
+# --- TokyoNight 状态栏（覆盖 gpakosz 默认）---
+set -g status-position top
+set -g status-style "bg=#1a1b26,fg=#a9b1d6"
+set -g status-left-length 40
+set -g status-right-length 80
+set -g status-left "#[fg=#7aa2f7,bold] #S #[fg=#565f89]│ "
+set -g status-right "#{cpu_bg_color} CPU:#{cpu_percentage} #[fg=#565f89]│ #{ram_bg_color} RAM:#{ram_percentage} #[fg=#565f89]│ #[fg=#9ece6a]%Y-%m-%d #[fg=#565f89]│ #[fg=#bb9af7]%H:%M "
+
+# 窗口标签样式
+setw -g window-status-format "#[fg=#565f89] #I:#W "
+setw -g window-status-current-format "#[fg=#1a1b26,bg=#7aa2f7,bold] #I:#W "
+setw -g window-status-separator ""
+
+# 面板边框
+set -g pane-border-style "fg=#3b4261"
+set -g pane-active-border-style "fg=#7aa2f7"
+
+# 消息样式
+set -g message-style "fg=#c0caf5,bg=#1a1b26"
+set -g message-command-style "fg=#c0caf5,bg=#1a1b26"

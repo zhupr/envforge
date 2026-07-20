@@ -1,0 +1,29 @@
+{
+  "name": "dotfiles-dev",
+  "build": {
+    "context": "../..",
+    "dockerfile": "../Dockerfile"
+  },
+  "remoteUser": "dev",
+  "mounts": [
+    "source=${localEnv:HOME}/projects,target=/workspace,type=bind,consistency=cached"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-python.python",
+        "golang.go",
+        "rust-lang.rust-analyzer",
+        "catppuccin.catppuccin-vsc"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  },
+  "postCreateCommand": "cd /home/dev/dotfiles && ./install.sh --container",
+  "remoteEnv": {
+    "PATH": "${containerEnv:HOME}/.local/bin:${containerEnv:PATH}"
+  }
+}
