@@ -1,5 +1,6 @@
 # Machine-specific (don't track)
 config/zsh/.p10k.zsh
+.zshrc.local
 
 # Neovim
 config/nvim/lazy-lock.json
