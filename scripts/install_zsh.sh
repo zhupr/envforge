@@ -23,7 +23,15 @@ fi
 
 # Install zimfw
 ZIM_HOME="${ZDOTDIR:-$HOME}/.zim"
-if [[ ! -e "$ZIM_HOME/zimfw.zsh" ]]; then
+if [[ "${DO_OFFLINE:-false}" == true ]]; then
+  ZIMFW_SRC="$(ls "$OFFLINE_DIR/zsh"/zimfw.zsh "$OFFLINE_DIR/nvim"/zimfw.zsh 2>/dev/null | head -n1)"
+  if [[ -n "$ZIMFW_SRC" ]]; then
+    mkdir -p "$ZIM_HOME" && copy_tree "$ZIMFW_SRC" "$ZIM_HOME/zimfw.zsh" 2>/dev/null || cp "$ZIMFW_SRC" "$ZIM_HOME/zimfw.zsh"
+    ok "zimfw offline copied from $ZIMFW_SRC"
+  else
+    warn "zimfw missing in offline/ — skipping zimfw (offline mode)."
+  fi
+elif [[ ! -e "$ZIM_HOME/zimfw.zsh" ]]; then
   info "Installing zimfw..."
   download "https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh" \
     "$ZIM_HOME/zimfw.zsh" || {

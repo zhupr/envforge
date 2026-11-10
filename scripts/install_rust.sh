@@ -3,7 +3,21 @@
 # =================================================================
 info "🦀 Setting up Rust..."
 
-if ! command -v rustc &>/dev/null; then
+if [[ "${DO_OFFLINE:-false}" == true ]]; then
+  RUSTUP_INIT="$OFFLINE_DIR/rust/rustup-init"
+  if [[ -f "$RUSTUP_INIT" ]]; then
+    chmod +x "$RUSTUP_INIT" && "$RUSTUP_INIT" -y --no-modify-path --default-toolchain stable
+  else
+    warn "rustup-init missing in $OFFLINE_DIR/rust/ — skipping Rust (offline mode)."
+  fi
+  export PATH="$HOME/.cargo/bin:$PATH"
+  ok "Rust offline handled"
+  # Skip network install below by short-circuiting the main block check
+  DO_RUST_OFFLINE_DONE=true
+fi
+if [[ "${DO_RUST_OFFLINE_DONE:-false}" == true ]]; then
+  : # offline already handled
+elif ! command -v rustc &>/dev/null; then
   info "Installing Rust via rustup..."
   # Use mirror if set
   RUSTUP_DIST_SERVER="${RUSTUP_DIST_SERVER:-}"

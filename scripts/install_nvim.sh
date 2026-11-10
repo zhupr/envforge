@@ -4,7 +4,24 @@
 info "📝 Setting up Neovim..."
 
 # Install neovim
-if ! command -v nvim &>/dev/null; then
+if [[ "${DO_OFFLINE:-false}" == true ]]; then
+  APPIMG="$(ls "$OFFLINE_DIR/nvim"/*.appimage 2>/dev/null | head -n1)"
+  if [[ -n "$APPIMG" ]]; then
+    mkdir -p "$HOME/.local/bin" && cp "$APPIMG" "$HOME/.local/bin/nvim" && chmod +x "$HOME/.local/bin/nvim"
+    ok "Neovim offline AppImage installed"
+  else
+    warn "Neovim AppImage missing in $OFFLINE_DIR/nvim/ — skipping nvim binary (offline mode)."
+  fi
+  NODE_TAR="$(ls "$OFFLINE_DIR/node"/node-*.tar.gz 2>/dev/null | head -n1)"
+  if [[ -n "$NODE_TAR" ]]; then
+    mkdir -p "$HOME/.local" && tar -xzf "$NODE_TAR" -C "$HOME/.local" --strip-components=1 2>/dev/null || unpack_tar "$NODE_TAR" "$HOME/.local/node"
+    ok "Node offline installed from $NODE_TAR"
+  fi
+  DO_NVIM_OFFLINE_DONE=true
+fi
+if [[ "${DO_NVIM_OFFLINE_DONE:-false}" == true ]]; then
+  : # offline handled
+elif ! command -v nvim &>/dev/null; then
   case "$PKG_MGR" in
     brew) brew install neovim ;;
     apt)
@@ -30,36 +47,36 @@ if ! command -v nvim &>/dev/null; then
 fi
 
 # Install Node.js via nvm (needed for some LSP servers, Mason, etc.)
-if ! command -v node &>/dev/null; then
+if [[ "${DO_OFFLINE:-false}" == true ]]; then
+  command -v node &>/dev/null && ok "Node already present (offline)" || warn "Node missing (offline) — add $OFFLINE_DIR/node/node-*.tar.gz"
+elif ! command -v node &>/dev/null; then
   info "Installing Node.js via nvm..."
   export NVM_DIR="$HOME/.nvm"
-  NVM_MIRROR="${NVM_MIRROR:-}"
-  NVM_NODEJS_ORG_MIRROR="${NVM_NODEJS_ORG_MIRROR:-}"
-
   if [[ ! -d "$NVM_DIR" ]]; then
-    download "https://github.com/nvm-sh/nvm/releases/latest/download/nvm.sh" "/tmp/nvm-install.sh" && \
-      bash /tmp/nvm-install.sh
+    download "https://github.com/nvm-sh/nvm/releases/latest/download/nvm.sh" "/tmp/nvm-install.sh" && bash /tmp/nvm-install.sh || warn "nvm install failed, skipping Node"
   fi
-
-  # Source nvm
-  [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-
-  # Install latest LTS node
-  if [[ -n "$NVM_NODEJS_ORG_MIRROR" ]]; then
-    NVM_NODEJS_ORG_MIRROR="$NVM_NODEJS_ORG_MIRROR" nvm install --lts
+  [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh" || true
+  if command -v nvm &>/dev/null; then
+    if [[ -n "${NVM_NODEJS_ORG_MIRROR:-}" ]]; then
+      NVM_NODEJS_ORG_MIRROR="$NVM_NODEJS_ORG_MIRROR" nvm install --lts || true
+    else
+      nvm install --lts || true
+    fi
+    nvm alias default 'lts/*' 2>/dev/null || true
+    ok "Node.js installed via nvm"
   else
-    nvm install --lts
+    warn "nvm not available, Node skipped (LazyVim needs node manually)"
   fi
-  nvm alias default 'lts/*'
-  ok "Node.js installed via nvm"
 fi
 
 # Install ripgrep, fd (nvim dependencies)
+if [[ "${DO_OFFLINE:-false}" != true ]]; then
 case "$PKG_MGR" in
   brew) brew install ripgrep fd ;;
   apt)  sudo apt-get install -y ripgrep fd-find ;;
   dnf)  sudo dnf install -y ripgrep fd-find ;;
 esac
+fi
 
 # Symlink nvim config
 if [[ -d "$HOME/.config/nvim" && ! -L "$HOME/.config/nvim" ]]; then

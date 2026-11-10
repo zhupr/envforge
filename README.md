@@ -2,7 +2,7 @@
 
 一键部署开发环境，支持 **macOS**、**Linux**、**Docker 容器**。
 
-**覆盖工具链**: Zsh · Neovim (LazyVim) · tmux · C++ (clangd/cmake/vcpkg) · Python (miniconda) · Go · Rust · 现代 CLI 工具
+**覆盖工具链**: Zsh · Neovim (LazyVim) · tmux · Herdr · omp · C++ (clangd/cmake/vcpkg) · Python (miniconda) · Go · Rust · 现代 CLI 工具 · Glow/Markdown 预览
 
 ## 快速开始
 
@@ -18,6 +18,13 @@ cd ~/code/dotfiles
 ./install.sh --zsh --nvim       # 仅 zsh + neovim
 ./install.sh --cpp --python     # 仅 C++ + Python
 ./install.sh --go --rust        # 仅 Go + Rust
+
+### 交互式选择
+
+```bash
+./install.sh --interactive   # whiptail > gum > fzf 菜单勾选组件 + 离线开关
+make install-interactive
+```
 ```
 
 ### 一行命令（无需克隆）
@@ -64,6 +71,8 @@ source scripts/setup_proxy.sh
 ./install.sh --offline            # 从本地包安装
 ```
 
+> **状态**：离线链路已接通（`download_offline.sh` ↔ `install.sh --offline` 同步扩展：`bins/` `herdr/` `omp/` `glow/`）。无包时各模块走 warn + 跳过，不再误触联网下载。
+
 ### 方案三：Docker 容器（内网镜像源可用）
 
 ```bash
@@ -94,7 +103,9 @@ export ALL_PROXY=socks5://proxy.company.com:1080
 | **Go** | go | go (tarball) | gopls + delve |
 | **Rust** | rustup | rustup | rust-analyzer |
 | **Node.js** | nvm | nvm | LTS 版本 |
-| **CLI 工具** | eza, bat, ripgrep, fzf, fd, yazi, lazygit, wget, jq, tree, htop | 同左 | 别名在 `.zshrc` |
+| **CLI 工具** | eza, bat, ripgrep, fzf, fd, yazi, lazygit, wget, jq, tree, htop, glow | 同左 | 别名在 `.zshrc` (`md`/`mdt`)，Neovim `<leader>cp` 预览 |
+| **Herdr** | brew / herdr.dev 安装脚本 | 同左 | `~/.config/herdr/config.toml` |
+| **omp** | omp.sh 安装脚本 | 同左 | `~/.omp/agent/config.yml`（本机基础配置同步，无 API key） |
 
 ## 项目结构
 
@@ -151,7 +162,9 @@ dotfiles/
 ./install.sh --python     # 仅 Python
 ./install.sh --go         # 仅 Go
 ./install.sh --rust       # 仅 Rust
-./install.sh --tools      # 仅 CLI 工具
+./install.sh --herdr      # 仅 Herdr multiplexer
+./install.sh --omp        # 仅 omp agent 配置
+./install.sh --interactive # 交互式勾选
 ./install.sh --offline    # 离线模式
 ./install.sh --container  # 容器内安装
 ./install.sh --help       # 查看帮助

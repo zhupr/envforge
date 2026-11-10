@@ -24,6 +24,14 @@ install-go: ## Install Go toolchain
 
 install-rust: ## Install Rust toolchain
 	./install.sh --rust
+install-herdr: ## Install Herdr multiplexer
+	./install.sh --herdr
+
+install-omp: ## Install omp agent config
+	./install.sh --omp
+
+install-interactive: ## Interactive component picker
+	./install.sh --interactive
 
 install-offline: ## Install from pre-downloaded offline packages
 	./install.sh --offline

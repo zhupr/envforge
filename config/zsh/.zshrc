@@ -47,6 +47,25 @@ if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZIM_CONFIG_FILE:-${ZDOTDIR:-${HOME}}/.zimrc} 
 fi
 # Prevent "completion already initialized" warning
 (( ${+_comps} )) && unset _comps
+
+# zimfw's input module turns on the keypad's application mode by wrapping
+# whatever widget zle-line-init/-finish is bound to: it copies ${widgets[...]}
+# into a new function and calls it. Tern's native prompt binds
+# add-zle-hook-widget's dispatcher to those hooks before .zshrc runs, so the
+# copy calls the dispatcher back. The next add-zle-hook-widget (from
+# syntax-highlighting) then records that wrapper as a hook of the dispatcher,
+# and the two call each other on every prompt until "job table full or
+# recursion limit exceeded". Registering the mode as ordinary hook widgets
+# first makes zim skip its block (it checks for these function names).
+if zmodload -F zsh/terminfo +b:echoti +p:terminfo 2>/dev/null &&
+    (( ${+terminfo[smkx]} && ${+terminfo[rmkx]} )) && zmodload -e zsh/zle; then
+  _start_application_mode() { echoti smkx }
+  _stop_application_mode() { echoti rmkx }
+  autoload -U add-zle-hook-widget
+  add-zle-hook-widget line-init _start_application_mode
+  add-zle-hook-widget line-finish _stop_application_mode
+fi
+
 source ${ZIM_HOME}/init.zsh
 
 # ------------------
@@ -106,6 +125,9 @@ alias grep='rg --color=auto'
 # fd
 alias find='fd'
 
+alias md='glow'      # terminal markdown viewer
+alias mdt='glow -t'  # glow TUI pager
+
 # ------------------
 # Other tools
 # ------------------
@@ -149,6 +171,13 @@ else
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
   _init_conda
 fi
+
+# omp: send opencode-go model API traffic through the local proxy.
+# Provider-scoped, so other providers stay direct. Use PI_PROXY for all providers.
+export PI_PROXY_OPENCODE_GO="http://127.0.0.1:7890"
+
+# herdr completion (install_herdr.sh writes ~/.zfunc/_herdr)
+[[ -d ~/.zfunc ]] && fpath=(~/.zfunc $fpath)
 
 # Load local overrides if present (machine-specific settings, API keys, etc.)
 [[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

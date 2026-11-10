@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_ROOT="$(dirname "$SCRIPT_DIR")"
 OFFLINE_DIR="$DOTFILES_ROOT/offline"
 
-mkdir -p "$OFFLINE_DIR"/{go,rust,nvim,tmux,conda,nvm,node}
+mkdir -p "$OFFLINE_DIR"/{go,rust,nvim,tmux,conda,nvm,node,herdr,omp,bins,glow}
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; NC='\033[0m'
 info() { echo -e "${BLUE}[INFO]${NC}  $*"; }
@@ -119,6 +119,26 @@ if [[ ! -f "$OFFLINE_DIR/nvim/vcpkg.tar.gz" ]]; then
   curl -fsSL "https://github.com/microsoft/vcpkg/archive/refs/heads/master.tar.gz" \
     -o "$OFFLINE_DIR/nvim/vcpkg.tar.gz"
   ok "vcpkg: $OFFLINE_DIR/nvim/vcpkg.tar.gz"
+fi
+
+# ---- herdr / omp / glow (prebuilt binaries) ----
+case "$(uname -s)-$(uname -m)" in
+  Darwin-arm64)  HERDR_ASSET="herdr-darwin-arm64"; GLOW_ASSET="glow_2.1.1_darwin_arm64.tar.gz" ;;
+  Linux-x86_64)  HERDR_ASSET="herdr-linux-x86_64";  GLOW_ASSET="glow_2.1.1_linux_amd64.tar.gz" ;;
+  Linux-aarch64) HERDR_ASSET="herdr-linux-aarch64"; GLOW_ASSET="glow_2.1.1_linux_arm64.tar.gz" ;;
+  *) HERDR_ASSET=""; GLOW_ASSET="" ;;
+esac
+if [[ -n "$HERDR_ASSET" && ! -f "$OFFLINE_DIR/bins/$HERDR_ASSET" ]]; then
+  info "Downloading herdr $HERDR_ASSET..."
+  curl -fsSL "https://github.com/herdrdev/herdr/releases/latest/download/$HERDR_ASSET" -o "$OFFLINE_DIR/bins/$HERDR_ASSET" || true
+fi
+if [[ -n "$GLOW_ASSET" && ! -f "$OFFLINE_DIR/glow/$GLOW_ASSET" ]]; then
+  info "Downloading glow $GLOW_ASSET..."
+  curl -fsSL "https://github.com/charmbracelet/glow/releases/latest/download/$GLOW_ASSET" -o "$OFFLINE_DIR/glow/$GLOW_ASSET" || true
+fi
+if command -v omp &>/dev/null && ! ls "$OFFLINE_DIR/omp"/omp* &>/dev/null; then
+  cp "$(command -v omp)" "$OFFLINE_DIR/omp/omp" 2>/dev/null || true
+  info "Copied omp binary to $OFFLINE_DIR/omp/"
 fi
 
 echo ""

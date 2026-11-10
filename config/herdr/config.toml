@@ -1,0 +1,22 @@
+# Herdr config — ~/.config/herdr/config.toml
+# Reference: https://herdr.dev/docs/configuration
+# Edit then reload without restart: `herdr server reload-config`
+
+onboarding = false
+
+[terminal]
+default_shell = ""
+# shell_mode = "auto"
+# new_cwd = "follow"
+
+[worktrees]
+directory = "~/.herdr/worktrees"
+
+[ui]
+# theme = "catppuccin"  # or: tokyonight, gruvbox, terminal
+
+[keys]
+prefix = "ctrl+b"
+switch_tab = "prefix+1..9"
+switch_workspace = "prefix+shift+1..9"
+focus_agent = "prefix+alt+1..9"

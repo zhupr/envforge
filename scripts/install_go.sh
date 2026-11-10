@@ -3,7 +3,22 @@
 # =================================================================
 info "🐹 Setting up Go..."
 
-if ! command -v go &>/dev/null; then
+if _offline_enabled; then
+  GO_TAR="$(ls "$OFFLINE_DIR/go"/go*.linux-*.tar.gz "$OFFLINE_DIR/go"/go*.darwin-*.tar.gz 2>/dev/null | head -n1)"
+  if [[ -n "$GO_TAR" && -f "$GO_TAR" ]]; then
+    info "Installing Go from offline package $GO_TAR"
+    sudo rm -rf /usr/local/go; sudo tar -C /usr/local -xzf "$GO_TAR" 2>/dev/null || tar -C "$HOME/.local" -xzf "$GO_TAR"
+    ok "Go offline installed"
+  else
+    warn "Go offline package missing in $OFFLINE_DIR/go/ — skipping Go."
+  fi
+  export PATH="/usr/local/go/bin:$HOME/.local/go/bin:$PATH"
+else
+  true
+fi
+if [[ "${_offline_enabled:-false}" == true ]]; then
+  : # offline handled above; skip network install
+elif ! command -v go &>/dev/null; then
   GO_VERSION="1.24.4"
   case "$PKG_MGR" in
     brew) brew install go ;;
@@ -38,8 +53,12 @@ info "Installing Go development tools..."
 export GOPATH="${GOPATH:-$HOME/go}"
 export PATH="$GOPATH/bin:$PATH"
 
-go install golang.org/x/tools/gopls@latest 2>/dev/null || warn "gopls install failed (network?)"
-go install github.com/go-delve/delve/cmd/dlv@latest 2>/dev/null || warn "delve install failed"
-go install honnef.co/go/tools/cmd/staticcheck@latest 2>/dev/null || warn "staticcheck install failed"
+if [[ "${SKIP_GO_TOOLS:-false}" == true ]]; then
+  ok "Go tools skipped (SKIP_GO_TOOLS=true)"
+elif [[ "${DO_OFFLINE:-false}" != true ]]; then
+  go install golang.org/x/tools/gopls@latest 2>/dev/null || warn "gopls install failed (network?)"
+  go install github.com/go-delve/delve/cmd/dlv@latest 2>/dev/null || warn "delve install failed"
+  go install honnef.co/go/tools/cmd/staticcheck@latest 2>/dev/null || warn "staticcheck install failed"
+fi
 
 ok "Go toolchain ready"

@@ -1,7 +1,7 @@
 # =================================================================
-# Modern CLI tools
+# Modern CLI tools + Nerd Font
 # Complete list: eza, bat, ripgrep, fzf, fd-find, yazi, tree, htop,
-#                lazygit, wget, jq
+#                lazygit, wget, jq, Nerd Font
 # =================================================================
 info "📦 Installing modern CLI tools..."
 
@@ -11,9 +11,33 @@ install_pkg() {
     ok "$cmd_name already installed"
     return 0
   fi
+  if [[ "${DO_OFFLINE:-false}" == true ]]; then
+    # Offline: prefer prebuilt binaries in offline/bins/
+    BIN="$(ls "$OFFLINE_DIR/bins"/$cmd_name* 2>/dev/null | head -n1)"
+    if [[ -n "$BIN" ]]; then
+      mkdir -p "$HOME/.local/bin" && cp "$BIN" "$HOME/.local/bin/$cmd_name" && chmod +x "$HOME/.local/bin/$cmd_name"
+      ok "$cmd_name offline installed from $BIN"
+    else
+      warn "$cmd_name missing (offline mode) — add offline/bins/$cmd_name* or run online once."
+    fi
+    return 0
+  fi
   case "$PKG_MGR" in
     brew) brew install "$brew_name" ;;
-    apt)  sudo apt-get install -y "$apt_name" ;;
+    apt)
+      sudo apt-get update 2>/dev/null || true
+      if apt-cache show "$apt_name" >/dev/null 2>&1; then
+        sudo apt-get install -y "$apt_name" 2>/dev/null || warn "$apt_name apt-get install failed, fallback"
+      else
+        warn "$apt_name not in apt repo, will install via binary fallback"
+        case "$cmd_name" in
+          eza) sudo apt-get install -y eza 2>/dev/null || (command -v cargo &>/dev/null && cargo install eza || warn "eza: no apt pkg, cargo unavailable") ;;
+          yazi) sudo apt-get install -y yazi 2>/dev/null || warn "yazi: skip (no apt pkg) — conf still linked" ;;
+          glow) sudo apt-get install -y glow 2>/dev/null || warn "glow: skip fallback" ;;
+          *) warn "skip $cmd_name (no apt pkg)" ;;
+        esac
+      fi
+      ;;
     dnf)  sudo dnf install -y "$brew_name" || sudo dnf install -y "$apt_name" ;;
     yum)  sudo yum install -y "$apt_name" ;;
   esac
@@ -31,6 +55,7 @@ install_pkg htop      htop      htop
 install_pkg lazygit   lazygit   lazygit
 install_pkg wget      wget      wget
 install_pkg jq        jq        jq
+install_pkg glow      glow      glow
 
 # Ubuntu: fd is named fdfind, create symlink
 if [[ "$PKG_MGR" == "apt" ]] && ! command -v fd &>/dev/null && command -v fdfind &>/dev/null; then
@@ -48,6 +73,56 @@ fi
 if [[ "$PKG_MGR" == "brew" ]]; then
   "$(brew --prefix)/opt/fzf/install" --all --no-bash --no-fish 2>/dev/null || true
 fi
+
+# Nerd Font (icons for eza/bat/nvim/tmux statusline)
+info "🔤 Installing Nerd Font..."
+NERD_FONT_INSTALLED=false
+
+if [[ -d "$HOME/Library/Fonts" ]] && ls "$HOME/Library/Fonts/"*NerdFont* &>/dev/null; then
+  NERD_FONT_INSTALLED=true
+  ok "Nerd Font already installed"
+elif [[ -d "$HOME/.local/share/fonts" ]] && ls "$HOME/.local/share/fonts/"*NerdFont* &>/dev/null; then
+  NERD_FONT_INSTALLED=true
+  ok "Nerd Font already installed"
+fi
+
+if [[ "$NERD_FONT_INSTALLED" == false ]]; then
+  FONT_NAME="MesloLGLNerdFont"
+  FONT_VER="v3.4.0"
+  FONT_ZIP="/tmp/${FONT_NAME}.zip"
+
+  case "$PKG_MGR" in
+    brew)
+      brew install --cask font-meslo-lg-nerd-font 2>/dev/null || \
+        warn "Font install via brew failed, retry: brew install --cask font-meslo-lg-nerd-font"
+      ok "Meslo LG Nerd Font installed (via Homebrew)"
+      ;;
+    *)
+      download "https://github.com/ryanoasis/nerd-fonts/releases/download/${FONT_VER}/${FONT_NAME}.zip" \
+        "$FONT_ZIP" || {
+        warn "Font download failed. Manual install:"
+        warn "  1. https://github.com/ryanoasis/nerd-fonts/releases"
+        warn "  2. Download ${FONT_NAME}.zip"
+        warn "  3. Unzip into ~/.local/share/fonts/"
+      }
+      if [[ -f "$FONT_ZIP" ]]; then
+        mkdir -p "$HOME/.local/share/fonts"
+        unzip -o "$FONT_ZIP" -d "$HOME/.local/share/fonts" >/dev/null 2>&1
+        fc-cache -fv >/dev/null 2>&1
+        rm -f "$FONT_ZIP"
+        ok "Meslo LG Nerd Font installed"
+      fi
+      ;;
+  esac
+fi
+
+echo ""
+echo "  ⚠️  Set your terminal font to: MesloLGL Nerd Font"
+echo "     iTerm2:         Profiles → Text → Font → MesloLGL Nerd Font"
+echo "     Kitty:          font_family MesloLGL Nerd Font (kitty.conf)"
+echo "     WezTerm:        auto-detects Nerd Font"
+echo "     macOS Terminal: no Nerd Font support — use iTerm2/Kitty/WezTerm"
+echo ""
 
 # Symlink ripgrep config
 link_file "$DOTFILES_ROOT/config/zsh/.ripgreprc" "$HOME/.ripgreprc"

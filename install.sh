@@ -62,15 +62,17 @@ info "Platform: $OS | Package manager: $PKG_MGR"
 # ---- parse flags ----
 DO_ZSH=false; DO_NVIM=false; DO_TMUX=false; DO_CPP=false
 DO_PYTHON=false; DO_GO=false; DO_TOOLS=false; DO_RUST=false; DO_OFFLINE=false
+DO_HERDR=false; DO_OMP=false
+DO_INTERACTIVE=false
 
 if [[ $# -eq 0 ]]; then
   DO_ZSH=true; DO_NVIM=true; DO_TMUX=true; DO_CPP=true
-  DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true
+  DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true; DO_HERDR=true; DO_OMP=true
 else
   for arg in "$@"; do
     case "$arg" in
       --all)       DO_ZSH=true; DO_NVIM=true; DO_TMUX=true; DO_CPP=true
-                   DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true ;;
+                   DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true; DO_HERDR=true; DO_OMP=true ;;
       --zsh)       DO_ZSH=true ;;
       --nvim)      DO_NVIM=true ;;
       --tmux)      DO_TMUX=true ;;
@@ -79,6 +81,9 @@ else
       --go)        DO_GO=true ;;
       --tools)     DO_TOOLS=true ;;
       --rust)      DO_RUST=true ;;
+      --herdr)     DO_HERDR=true ;;
+      --omp)       DO_OMP=true ;;
+      --interactive|-i) DO_INTERACTIVE=true ;;
       --offline)   DO_OFFLINE=true ;;
       --container) ;;  # already handled above
       --help|-h)
@@ -94,6 +99,9 @@ else
         echo "  --go           Go toolchain"
         echo "  --rust         Rust toolchain (rustup + rust-analyzer)"
         echo "  --tools        CLI tools (eza, bat, ripgrep, fzf, fd, yazi, lazygit)"
+        echo "  --herdr        Herdr terminal multiplexer (config + completion)"
+        echo "  --omp          omp coding agent (config from ~/.omp/agent)"
+        echo "  --interactive  Interactive component picker"
         echo "  --offline      Install from local/offline packages"
         echo "  --container    Install inside container"
         echo "  -h, --help     Show this help"
@@ -137,6 +145,8 @@ download() {
 # export for sub-scripts
 export -f link_file info ok warn err download
 export DOTFILES_ROOT SCRIPTS_DIR PKG_MGR OS IS_CONTAINER DO_OFFLINE
+source "$SCRIPTS_DIR/offline.sh"
+[[ "$DO_INTERACTIVE" == true ]] && source "$SCRIPTS_DIR/interactive.sh"
 
 # ---- run install modules ----
 echo ""
@@ -153,6 +163,8 @@ echo ""
 [[ "$DO_PYTHON" == true ]] && source "$SCRIPTS_DIR/install_python.sh"
 [[ "$DO_GO" == true ]]     && source "$SCRIPTS_DIR/install_go.sh"
 [[ "$DO_RUST" == true ]]   && source "$SCRIPTS_DIR/install_rust.sh"
+[[ "$DO_HERDR" == true ]] && source "$SCRIPTS_DIR/install_herdr.sh"
+[[ "$DO_OMP" == true ]]   && source "$SCRIPTS_DIR/install_omp.sh"
 
 echo ""
 echo "========================================="

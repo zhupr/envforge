@@ -4,7 +4,19 @@
 info "🐍 Setting up Python environment..."
 
 CONDA_DIR="$HOME/miniconda3"
-if [[ ! -d "$CONDA_DIR" ]]; then
+if [[ "${DO_OFFLINE:-false}" == true ]]; then
+  CONDA_SH="$(ls "$OFFLINE_DIR/conda"/Miniconda3-*.sh 2>/dev/null | head -n1)"
+  if [[ -n "$CONDA_SH" ]]; then
+    bash "$CONDA_SH" -b -p "$CONDA_DIR" && ok "Miniconda offline installed"
+  else
+    warn "Miniconda installer missing in $OFFLINE_DIR/conda/ — skipping Python (offline mode)."
+  fi
+  # Skip online install below
+  DO_PYTHON_OFFLINE_DONE=true
+fi
+if [[ "${DO_PYTHON_OFFLINE_DONE:-false}" == true ]]; then
+  : # offline already handled
+elif [[ ! -d "$CONDA_DIR" ]]; then
   info "Installing miniconda..."
   ARCH="$(uname -m)"
   CONDA_MIRROR="${CONDA_MIRROR:-https://repo.anaconda.com/miniconda}"
@@ -44,7 +56,9 @@ fi
 
 # Install Python dev tools
 info "Installing Python dev tools..."
-"$CONDA_DIR/bin/pip" install --upgrade pip 2>/dev/null || true
-"$CONDA_DIR/bin/pip" install ruff pyright 2>/dev/null || true
+if [[ "${DO_OFFLINE:-false}" != true ]]; then
+  "$CONDA_DIR/bin/pip" install --upgrade pip 2>/dev/null || true
+  "$CONDA_DIR/bin/pip" install ruff pyright 2>/dev/null || true
+fi
 
 ok "Python environment ready"
