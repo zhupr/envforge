@@ -9,7 +9,7 @@ if command -v herdr &>/dev/null; then
   ok "herdr already installed ($(herdr --version 2>/dev/null))"
 else
   if [[ "${DO_OFFLINE:-false}" == true ]]; then
-    HERDR_BIN="$(ls "$OFFLINE_DIR/bins"/herdr* "$OFFLINE_DIR/herdr"/herdr* 2>/dev/null | head -n1)"
+    HERDR_BIN="$(ls "$OFFLINE_DIR/bins"/herdr* "$OFFLINE_DIR/herdr"/herdr* 2>/dev/null | head -n1 || true)"
     if [[ -n "$HERDR_BIN" ]]; then
       mkdir -p "$HOME/.local/bin" && cp "$HERDR_BIN" "$HOME/.local/bin/herdr" && chmod +x "$HOME/.local/bin/herdr"
       ok "herdr offline installed from $HERDR_BIN"

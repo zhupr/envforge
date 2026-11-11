@@ -1,47 +1,36 @@
 return {
-  -- 自动补全覆盖（保留 LazyVim 默认，自定义快捷键）
+  -- Completion: current LazyVim ships blink.cmp (no nvim-cmp / LuaSnip).
+  -- Keep LazyVim defaults; only tweak the accept key to match muscle memory.
   {
-    "hrsh7th/nvim-cmp",
-    opts = function(_, opts)
-      local cmp = require("cmp")
-      opts.mapping = cmp.mapping.preset.insert({
-        ["<C-n>"] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Insert }),
-        ["<C-p>"] = cmp.mapping.select_prev_item({ behavior = cmp.SelectBehavior.Insert }),
-        ["<C-b>"] = cmp.mapping.scroll_docs(-4),
-        ["<C-f>"] = cmp.mapping.scroll_docs(4),
-        ["<C-Space>"] = cmp.mapping.complete(),
-        ["<C-e>"] = cmp.mapping.abort(),
-        ["<CR>"] = cmp.mapping.confirm({ select = true }),
-        ["<S-CR>"] = cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Replace, select = true }),
-        ["<Tab>"] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.select_next_item()
-          else
-            fallback()
-          end
-        end, { "i", "s" }),
-        ["<S-Tab>"] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.select_prev_item()
-          else
-            fallback()
-          end
-        end, { "i", "s" }),
-      })
-    end,
+    "saghen/blink.cmp",
+    optional = true,
+    opts = {
+      keymap = {
+        preset = "default",
+        ["<C-n>"] = { "select_next", "fallback" },
+        ["<C-p>"] = { "select_prev", "fallback" },
+        ["<C-b>"] = { "scroll_documentation_up", "fallback" },
+        ["<C-f>"] = { "scroll_documentation_down", "fallback" },
+        ["<C-Space>"] = { "show", "fallback" },
+        ["<C-e>"] = { "hide", "fallback" },
+        ["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
+        ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
+      },
+    },
   },
 
-  -- 代码片段
+  -- 代码片段（LuaSnip 只在启用 coding.luasnip extra 时存在，缺失时跳过）
   {
     "rafamadriz/friendly-snippets",
     config = function()
-      require("luasnip.loaders.from_vscode").lazy_load()
+      local ok, loader = pcall(require, "luasnip.loaders.from_vscode")
+      if ok then loader.lazy_load() end
     end,
   },
 
   -- Surround
   {
-    "echasnovski/mini.surround",
+    "nvim-mini/mini.surround",
     keys = {
       { "sa", desc = "Add Surrounding", mode = { "n", "v" } },
       { "sd", desc = "Delete Surrounding" },

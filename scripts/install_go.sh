@@ -3,22 +3,20 @@
 # =================================================================
 info "🐹 Setting up Go..."
 
-if _offline_enabled; then
-  GO_TAR="$(ls "$OFFLINE_DIR/go"/go*.linux-*.tar.gz "$OFFLINE_DIR/go"/go*.darwin-*.tar.gz 2>/dev/null | head -n1)"
+if [[ "${DO_OFFLINE:-false}" == true ]]; then
+  GO_TAR="$(ls "$OFFLINE_DIR/go"/go*.linux-*.tar.gz "$OFFLINE_DIR/go"/go*.darwin-*.tar.gz 2>/dev/null | head -n1 || true)"
   if [[ -n "$GO_TAR" && -f "$GO_TAR" ]]; then
     info "Installing Go from offline package $GO_TAR"
-    sudo rm -rf /usr/local/go; sudo tar -C /usr/local -xzf "$GO_TAR" 2>/dev/null || tar -C "$HOME/.local" -xzf "$GO_TAR"
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf "$GO_TAR" 2>/dev/null || tar -C "$HOME/.local" -xzf "$GO_TAR"
     ok "Go offline installed"
+    export PATH="/usr/local/go/bin:$HOME/.local/go/bin:$PATH"
   else
-    warn "Go offline package missing in $OFFLINE_DIR/go/ — skipping Go."
+    warn "Go offline package missing in $OFFLINE_DIR/go/ — falling back to $PKG_MGR"
   fi
-  export PATH="/usr/local/go/bin:$HOME/.local/go/bin:$PATH"
-else
-  true
 fi
-if [[ "${_offline_enabled:-false}" == true ]]; then
-  : # offline handled above; skip network install
-elif ! command -v go &>/dev/null; then
+
+if ! command -v go &>/dev/null; then
   GO_VERSION="1.24.4"
   case "$PKG_MGR" in
     brew) brew install go ;;
@@ -30,14 +28,17 @@ elif ! command -v go &>/dev/null; then
         *) err "Unsupported arch: $ARCH"; return 1 ;;
       esac
       GO_TAR="go${GO_VERSION}.linux-${GO_ARCH}.tar.gz"
-      download "https://go.dev/dl/$GO_TAR" "/tmp/$GO_TAR"
-      sudo rm -rf /usr/local/go
-      sudo tar -C /usr/local -xzf "/tmp/$GO_TAR"
-      rm -f "/tmp/$GO_TAR"
-      export PATH="/usr/local/go/bin:$PATH"
+      if download "https://go.dev/dl/$GO_TAR" "/tmp/$GO_TAR"; then
+        sudo rm -rf /usr/local/go
+        sudo tar -C /usr/local -xzf "/tmp/$GO_TAR"
+        rm -f "/tmp/$GO_TAR"
+        export PATH="/usr/local/go/bin:$PATH"
+      else
+        warn "Could not download Go $GO_VERSION"
+      fi
       ;;
   esac
-  ok "Go installed"
+  command -v go &>/dev/null && ok "Go installed" || warn "Go not installed"
 else
   ok "Go already installed ($(go version 2>/dev/null))"
 fi

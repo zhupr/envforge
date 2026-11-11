@@ -11,7 +11,7 @@ if command -v omp &>/dev/null; then
   ok "omp already installed ($(omp --version 2>/dev/null | head -n1))"
 else
   if [[ "${DO_OFFLINE:-false}" == true ]]; then
-    OMP_BIN="$(ls "$OFFLINE_DIR/bins"/omp* "$OFFLINE_DIR/omp"/omp* 2>/dev/null | head -n1)"
+    OMP_BIN="$(ls "$OFFLINE_DIR/bins"/omp* "$OFFLINE_DIR/omp"/omp* 2>/dev/null | head -n1 || true)"
     if [[ -n "$OMP_BIN" ]]; then
       mkdir -p "$HOME/.local/bin" && cp "$OMP_BIN" "$HOME/.local/bin/omp" && chmod +x "$HOME/.local/bin/omp"
       ok "omp offline installed from $OMP_BIN"

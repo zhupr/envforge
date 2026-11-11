@@ -42,7 +42,14 @@ return {
       },
     },
   },
-  -- 设置默认主题（二选一，取消注释想要的）
+  -- 主题：Gruvbox（备选）
+  {
+    "ellisonleao/gruvbox.nvim",
+    lazy = true,
+    opts = { contrast = "hard", transparent_mode = false },
+  },
+  -- 设置默认主题（三选一，取消注释想要的）
   { "LazyVim/LazyVim", opts = { colorscheme = "tokyonight" } },
   -- { "LazyVim/LazyVim", opts = { colorscheme = "catppuccin" } },
+  -- { "LazyVim/LazyVim", opts = { colorscheme = "gruvbox" } },
 }

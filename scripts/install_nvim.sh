@@ -5,23 +5,46 @@ info "📝 Setting up Neovim..."
 
 # Install neovim
 if [[ "${DO_OFFLINE:-false}" == true ]]; then
-  APPIMG="$(ls "$OFFLINE_DIR/nvim"/*.appimage 2>/dev/null | head -n1)"
+  NVIM_BIN="$HOME/.local/bin/nvim"
+  mkdir -p "$HOME/.local/bin"
+  APPIMG="$(ls "$OFFLINE_DIR/nvim"/*.appimage 2>/dev/null | head -n1 || true)"
+  ARCHIVE="$(ls "$OFFLINE_DIR/nvim"/*.tar.gz 2>/dev/null | grep -v vcpkg | head -n1 || true)"
   if [[ -n "$APPIMG" ]]; then
-    mkdir -p "$HOME/.local/bin" && cp "$APPIMG" "$HOME/.local/bin/nvim" && chmod +x "$HOME/.local/bin/nvim"
+    cp "$APPIMG" "$NVIM_BIN" && chmod +x "$NVIM_BIN"
     ok "Neovim offline AppImage installed"
+  elif [[ -n "$ARCHIVE" ]]; then
+    # nvim-linux-<arch>.tar.gz / nvim-macos-<arch>.tar.gz (macOS is supported now)
+    NVIM_TMP="$(mktemp -d)"
+    if tar -xzf "$ARCHIVE" -C "$NVIM_TMP" 2>/dev/null; then
+      cp -R "$NVIM_TMP"/nvim-*/. "$HOME/.local/" 2>/dev/null || true
+      [[ -x "$HOME/.local/bin/nvim" ]] || cp "$NVIM_TMP"/nvim-*/bin/nvim "$NVIM_BIN" 2>/dev/null || true
+      chmod +x "$NVIM_BIN" 2>/dev/null || true
+    fi
+    rm -rf "$NVIM_TMP"
+    if [[ -x "$NVIM_BIN" ]]; then
+      ok "Neovim offline archive installed from $ARCHIVE"
+    else
+      warn "Neovim archive $ARCHIVE could not be unpacked into ~/.local/bin/nvim"
+    fi
   else
-    warn "Neovim AppImage missing in $OFFLINE_DIR/nvim/ — skipping nvim binary (offline mode)."
+    warn "Neovim package missing in $OFFLINE_DIR/nvim/ — will try the network path instead."
   fi
-  NODE_TAR="$(ls "$OFFLINE_DIR/node"/node-*.tar.gz 2>/dev/null | head -n1)"
+
+  NODE_TAR="$(ls "$OFFLINE_DIR/node"/node-*.tar.gz 2>/dev/null | head -n1 || true)"
   if [[ -n "$NODE_TAR" ]]; then
     mkdir -p "$HOME/.local" && tar -xzf "$NODE_TAR" -C "$HOME/.local" --strip-components=1 2>/dev/null || unpack_tar "$NODE_TAR" "$HOME/.local/node"
     ok "Node offline installed from $NODE_TAR"
   fi
-  DO_NVIM_OFFLINE_DONE=true
+
+  # Only claim "done" when a binary actually exists; otherwise fall through to
+  # the online path (brew/apt) instead of silently skipping Neovim.
+  if [[ -x "$HOME/.local/bin/nvim" ]] || command -v nvim &>/dev/null; then
+    DO_NVIM_OFFLINE_DONE=true
+  fi
 fi
 if [[ "${DO_NVIM_OFFLINE_DONE:-false}" == true ]]; then
   : # offline handled
-elif ! command -v nvim &>/dev/null; then
+elif ! command -v nvim &>/dev/null && ! [[ -x "$HOME/.local/bin/nvim" ]]; then
   case "$PKG_MGR" in
     brew) brew install neovim ;;
     apt)
@@ -29,13 +52,10 @@ elif ! command -v nvim &>/dev/null; then
       info "Installing Neovim AppImage..."
       NVIM_DIR="$HOME/.local/bin"
       mkdir -p "$NVIM_DIR"
-      if [[ "$(uname -m)" == "x86_64" ]]; then
-        download "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage" \
-          "$NVIM_DIR/nvim" && chmod +x "$NVIM_DIR/nvim"
-      else
-        download "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-arm64.appimage" \
-          "$NVIM_DIR/nvim" && chmod +x "$NVIM_DIR/nvim"
-      fi
+      NVIM_TARGET="$([[ "$(uname -m)" == "x86_64" ]] && echo x86_64 || echo arm64)"
+      NVIM_URL="$(api_asset_url neovim/neovim "^nvim-linux-${NVIM_TARGET}\.appimage$")"
+      [[ -z "$NVIM_URL" ]] && NVIM_URL="https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${NVIM_TARGET}.appimage"
+      download "$NVIM_URL" "$NVIM_DIR/nvim" && chmod +x "$NVIM_DIR/nvim"
       # Fallback to apt if AppImage fails
       if ! command -v nvim &>/dev/null && ! [[ -x "$NVIM_DIR/nvim" ]]; then
         warn "AppImage failed, trying apt..."
@@ -53,7 +73,9 @@ elif ! command -v node &>/dev/null; then
   info "Installing Node.js via nvm..."
   export NVM_DIR="$HOME/.nvm"
   if [[ ! -d "$NVM_DIR" ]]; then
-    download "https://github.com/nvm-sh/nvm/releases/latest/download/nvm.sh" "/tmp/nvm-install.sh" && bash /tmp/nvm-install.sh || warn "nvm install failed, skipping Node"
+    # nvm publishes no release asset named nvm.sh; use the git installer.
+    download "https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh" "/tmp/nvm-install.sh" &&
+      bash /tmp/nvm-install.sh || warn "nvm install failed, skipping Node"
   fi
   [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh" || true
   if command -v nvm &>/dev/null; then

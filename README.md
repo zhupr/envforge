@@ -1,237 +1,259 @@
-# dotfiles
+# envforge
 
-一键部署开发环境，支持 **macOS**、**Linux**、**Docker 容器**。
+**English** · [简体中文](README.zh-CN.md)
 
-**覆盖工具链**: Zsh · Neovim (LazyVim) · tmux · Herdr · omp · C++ (clangd/cmake/vcpkg) · Python (miniconda) · Go · Rust · 现代 CLI 工具 · Glow/Markdown 预览
-
-## 快速开始
+One-command developer environment for **macOS**, **Linux** and **Docker** — covering
+Zsh, Neovim (LazyVim), tmux, Herdr, omp, C++/Python/Go/Rust toolchains and a set of
+modern CLI tools. Works online, behind a corporate mirror, or fully offline.
 
 ```bash
-# 克隆
-git clone https://github.com/<you>/dotfiles.git ~/code/dotfiles
-cd ~/code/dotfiles
+git clone https://github.com/<you>/envforge.git ~/code/envforge
+cd ~/code/envforge
+./install.sh                # everything
+./install.sh --zsh --nvim   # or just what you need
+./install.sh --interactive  # pick components from a menu
+```
 
-# 一键安装所有
+## What you get
+
+| Component | macOS | Linux | Config |
+|---|---|---|---|
+| **Zsh** | zsh + zimfw + powerlevel10k | same | `.zshrc`, `.zimrc` |
+| **Neovim** | neovim | AppImage or tarball | LazyVim + TokyoNight, `blink.cmp` |
+| **tmux** | tmux + gpakosz | same | `tmux.conf.local` |
+| **Herdr** | brew / installer | installer | `~/.config/herdr/config.toml` |
+| **omp** | installer | installer | `~/.omp/agent/config.yml` |
+| **C++** | cmake + llvm | cmake + clang | clangd, clang-format, vcpkg |
+| **Python** | miniconda | miniconda | ruff, pyright |
+| **Go** | go | tarball | gopls, delve, staticcheck |
+| **Rust** | rustup | rustup | rust-analyzer |
+| **Node.js** | nvm | nvm / tarball | LTS |
+| **CLI tools** | eza, bat, ripgrep, fzf, fd, yazi, lazygit, tree, htop, jq, wget, glow | same | aliases in `.zshrc` |
+| **Nerd Font** | Meslo LG L | Meslo LG L | terminal font setting |
+
+Enabled LazyVim extras include `editor.fzf`, `editor.harpoon2`, `lang.markdown`,
+`lang.python`, `lang.rust`, `lang.typescript`, `lang.yaml`, `linting.eslint`,
+`formatting.prettier`, `util.project` and more (see `config/nvim/lazyvim.json`).
+
+## Options
+
+```bash
+./install.sh --all          # everything (default with no flags)
+./install.sh --zsh          # Zsh + zimfw + powerlevel10k
+./install.sh --nvim         # Neovim + LazyVim config
+./install.sh --tmux         # tmux + gpakosz framework
+./install.sh --cpp          # C++ toolchain
+./install.sh --python       # Python + miniconda
+./install.sh --go           # Go
+./install.sh --rust         # Rust
+./install.sh --tools        # CLI tools + Nerd Font + glow
+./install.sh --herdr        # Herdr multiplexer
+./install.sh --omp          # omp agent config
+./install.sh --interactive  # whiptail / gum / fzf picker
+./install.sh --offline      # use packages from offline/ (implies --all)
+./install.sh --container    # force container (apt) mode
+```
+
+Exit codes are meaningful: a failed required component stops the run; optional
+extras (Mason packages, gpakosz framework, vcpkg bootstrap, Go tools) degrade to a
+warning so the rest of the install still completes.
+
+## Project layout
+
+```
+envforge/
+├── install.sh                     # entry point
+├── Makefile                       # make install / update / nvim-sync / container
+├── config/
+│   ├── zsh/                       # .zshrc, .zimrc, .ripgreprc
+│   ├── nvim/                       # LazyVim config, symlinked to ~/.config/nvim
+│   ├── tmux/tmux.conf.local
+│   ├── yazi/
+│   ├── herdr/config.toml
+│   └── omp/agent/config.yml       # base omp config (no credentials)
+├── scripts/
+│   ├── install_*.sh               # one module per component
+│   ├── offline.sh                 # shared offline helpers
+│   ├── download_offline.sh        # build the offline bundle
+│   ├── interactive.sh             # component picker
+│   ├── nvim_sync.sh               # headless Lazy sync + wait for Mason
+│   ├── setup_proxy.sh             # China mirrors
+│   └── uninstall.sh
+├── containers/                    # Dockerfile, docker-compose.yml, devcontainer
+└── offline/                       # downloaded packages (gitignored)
+```
+
+## Corporate networks and mirrors
+
+```bash
+source scripts/setup_proxy.sh     # detects China and exports mirrors
 ./install.sh
-
-# 或选择性安装
-./install.sh --zsh --nvim       # 仅 zsh + neovim
-./install.sh --cpp --python     # 仅 C++ + Python
-./install.sh --go --rust        # 仅 Go + Rust
-
-### 交互式选择
-
-```bash
-./install.sh --interactive   # whiptail > gum > fzf 菜单勾选组件 + 离线开关
-make install-interactive
-```
 ```
 
-### 一行命令（无需克隆）
+| Tool | Mirror |
+|---|---|
+| GitHub | `GITHUB_MIRROR` (e.g. `https://ghfast.top/https://github.com`) |
+| Homebrew | `HOMEBREW_API_DOMAIN`, `HOMEBREW_BOTTLE_DOMAIN` |
+| APT | `APT_MIRROR` |
+| Go | `GOPROXY` |
+| pip | `PIP_INDEX_URL` |
+| npm / nvm | `NVM_NODEJS_ORG_MIRROR` |
+| Conda | `CONDA_MIRROR` |
+| Rust | `RUSTUP_DIST_SERVER`, `RUSTUP_UPDATE_ROOT` |
+
+Useful environment switches for the installer itself:
+
+| Variable | Effect |
+|---|---|
+| `SKIP_GO_TOOLS=true` | skip `gopls`/`delve`/`staticcheck` builds (slow) |
+| `MASON_RESTRICTED=1` | Neovim: use the `mason.providers.client` provider only |
+| `DOTFILES_RESTRICTED_NETWORK=1` | same as above |
+| `HTTPS_PROXY` | honoured by curl, git and the offline downloader |
+
+## Offline installation
+
+1. On a machine with network (python3 required, `GITHUB_TOKEN` recommended to avoid
+   the 60 req/h API limit):
+
+   ```bash
+   export GITHUB_TOKEN=...          # optional but recommended
+   ./scripts/download_offline.sh
+   ```
+
+   Asset names are resolved through the GitHub API for the *latest* release, so
+   nothing is pinned to a stale `/latest/download/<name>` path.
+
+2. Copy the whole `envforge/` directory to the target machine.
+
+3. Install:
+
+   ```bash
+   ./install.sh --offline            # implies --all
+   ./install.sh --offline --tools    # or a subset
+   ```
+
+Bundle contents (`offline/`):
+
+| Path | Contents |
+|---|---|
+| `go/` | Go tarball |
+| `rust/rust-toolchain.tar.gz` | full `~/.rustup` + `~/.cargo` snapshot (installs without network) |
+| `nvim/` | Neovim AppImage (Linux) or tarball (Linux/macOS), zimfw, vcpkg |
+| `tmux/` | tmux source tarball, gpakosz framework |
+| `conda/`, `node/` | Miniconda and Node.js tarballs |
+| `bins/` | herdr, omp plus archives for eza/bat/rg/fd/fzf/yazi/lazygit/glow |
+| `fonts/` | Meslo Nerd Font zip |
+
+**Known limits** — the offline bundle cannot carry these, by design:
+
+* Neovim *plugins*, tree-sitter parsers and Mason packages still need network on the
+  first `nvim` start. Run `./scripts/nvim_sync.sh` once on a networked machine and
+  copy `~/.local/share/nvim` together with `~/.local/share/nvim/mason`.
+* Rust is provisioned from the bundled toolchain snapshot; `rustup update` needs
+  network.
+* System packages (clang/cmake/zsh/tmux) come from the OS package manager. Where a
+  prebuilt copy is unavailable the installer warns and then still tries
+  `brew`/`apt`, so a warm cache or reachable mirror is used instead of being blocked.
+
+## Docker
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<you>/dotfiles/main/install.sh | bash
-```
-
-## 公司网络 / 无法访问 GitHub？
-
-### 方案一：自动配置国内镜像
-
-```bash
-# 自动检测并配置中国镜像（清华源、中科大源等）
-source scripts/setup_proxy.sh
-
-# 然后正常安装
-./install.sh
-```
-
-支持的镜像：
-| 工具 | 镜像源 |
-|------|--------|
-| GitHub | ghfast.top 代理 |
-| Homebrew | 清华 TUNA |
-| APT | 清华 TUNA |
-| Go modules | goproxy.cn |
-| pip | 清华 TUNA |
-| npm | npmmirror.com |
-| Conda | 清华 TUNA |
-| Rust/Cargo | 中科大 USTC |
-
-### 方案二：离线安装
-
-在有网的机器上下载所有依赖，然后拷贝到目标机器：
-
-```bash
-# 1. 在有网的机器上
-./scripts/download_offline.sh     # 下载所有二进制包到 offline/ 目录
-
-# 2. 拷贝整个 dotfiles 目录到目标机器（U盘/内网传输）
-
-# 3. 在目标机器上
-./install.sh --offline            # 从本地包安装
-```
-
-> **状态**：离线链路已接通（`download_offline.sh` ↔ `install.sh --offline` 同步扩展：`bins/` `herdr/` `omp/` `glow/`）。无包时各模块走 warn + 跳过，不再误触联网下载。
-
-### 方案三：Docker 容器（内网镜像源可用）
-
-```bash
-# 容器内安装开发环境，本地磁盘挂载到 /workspace
 docker compose -f containers/docker-compose.yml up -d --build
 docker compose -f containers/docker-compose.yml exec dev zsh
 ```
 
-### 方案四：手动设置代理
+Build arguments:
+
+| Argument | Default | Purpose |
+|---|---|---|
+| `BASE_IMAGE` | `ubuntu:26.04` | base image |
+| `OFFLINE` | `false` | run `install.sh --all --offline` |
+| `SKIP_GO_TOOLS` | `true` | skip Go tool builds in the image |
+
+`./install.sh --container` only switches to apt mode; it installs nothing by itself,
+so the image runs `--all` explicitly.
+
+## Neovim notes
+
+**Mason behind a restricted network.** With the default providers an unreachable
+`api.mason-registry.dev` makes `:MasonUpdate` hang. Use the client-only provider:
 
 ```bash
-export HTTP_PROXY=http://proxy.company.com:8080
-export HTTPS_PROXY=http://proxy.company.com:8080
-export ALL_PROXY=socks5://proxy.company.com:1080
-./install.sh
+MASON_RESTRICTED=1 nvim
 ```
 
-## 安装内容一览
-
-| 组件 | macOS (Homebrew) | Linux (apt) | 配置文件 |
-|------|-----------------|-------------|----------|
-| **Zsh** | zsh + zimfw | zsh + zimfw | `.zshrc`, `.zimrc` |
-| **Prompt** | powerlevel10k | powerlevel10k | `.p10k.zsh` |
-| **Neovim** | neovim | AppImage | LazyVim + TokyoNight |
-| **tmux** | tmux + gpakosz | tmux + gpakosz | `tmux.conf.local` |
-| **C++** | cmake + llvm | cmake + clang | clangd, vcpkg |
-| **Python** | miniconda | miniconda | pyright + ruff |
-| **Go** | go | go (tarball) | gopls + delve |
-| **Rust** | rustup | rustup | rust-analyzer |
-| **Node.js** | nvm | nvm | LTS 版本 |
-| **CLI 工具** | eza, bat, ripgrep, fzf, fd, yazi, lazygit, wget, jq, tree, htop, glow | 同左 | 别名在 `.zshrc` (`md`/`mdt`)，Neovim `<leader>cp` 预览 |
-| **Herdr** | brew / herdr.dev 安装脚本 | 同左 | `~/.config/herdr/config.toml` |
-| **omp** | omp.sh 安装脚本 | 同左 | `~/.omp/agent/config.yml`（本机基础配置同步，无 API key） |
-
-## 项目结构
-
-```
-dotfiles/
-├── install.sh                         # 主入口
-├── Makefile                           # make install / update / container
-├── config/
-│   ├── zsh/
-│   │   ├── .zshrc                     # Zsh 配置 (zimfw, fzf, 别名, nvm/conda 懒加载)
-│   │   ├── .zimrc                     # Zimfw 模块列表
-│   │   └── .ripgreprc                 # ripgrep 默认参数
-│   ├── nvim/                          # LazyVim 配置 (符号链接到 ~/.config/nvim)
-│   │   ├── init.lua                   # 入口 (自动检测 Python/Node 路径)
-│   │   ├── lazyvim.json               # LazyVim extras
-│   │   └── lua/
-│   │       ├── config/                # lazy.lua, options.lua, keymaps.lua, autocmds.lua
-│   │       └── plugins/               # coding, colorscheme, cpp, debug, editor, lsp, ui, util
-│   ├── tmux/
-│   │   └── tmux.conf.local            # tmux 配置 (gpakosz 框架)
-│   └── yazi/
-│       ├── yazi.toml                  # Yazi 文件管理器配置
-│       └── keymap.toml                # Yazi 快捷键
-├── scripts/
-│   ├── install_tools.sh               # CLI 工具 (eza, bat, ripgrep, fzf, fd, yazi, lazygit)
-│   ├── install_zsh.sh                 # Zsh + zimfw
-│   ├── install_nvim.sh                # Neovim + nvm + Node.js
-│   ├── install_tmux.sh                # tmux + gpakosz
-│   ├── install_cpp.sh                 # C++ 工具链 + vcpkg
-│   ├── install_python.sh              # Python + miniconda
-│   ├── install_go.sh                  # Go
-│   ├── install_rust.sh                # Rust (rustup + rust-analyzer)
-│   ├── setup_proxy.sh                 # 自动配置国内镜像
-│   ├── download_offline.sh            # 离线包下载器
-│   └── uninstall.sh                   # 移除符号链接
-├── containers/
-│   ├── Dockerfile                     # Ubuntu 开发容器
-│   ├── docker-compose.yml             # Docker Compose (挂载本地磁盘)
-│   └── .devcontainer/                 # VS Code devcontainer
-│       └── devcontainer.json
-└── offline/                           # 离线包 (gitignore, 手动管理)
-```
-
-## 使用指南
-
-### 安装选项
+**Headless bootstrap.** `nvim --headless "+Lazy! sync" +qa` exits before Mason's
+asynchronous installs finish. Use the wrapper, which waits:
 
 ```bash
-./install.sh              # 安装全部
-./install.sh --zsh        # 仅 Zsh
-./install.sh --nvim       # 仅 Neovim
-./install.sh --tmux       # 仅 tmux
-./install.sh --cpp        # 仅 C++ 工具链
-./install.sh --python     # 仅 Python
-./install.sh --go         # 仅 Go
-./install.sh --rust       # 仅 Rust
-./install.sh --herdr      # 仅 Herdr multiplexer
-./install.sh --omp        # 仅 omp agent 配置
-./install.sh --interactive # 交互式勾选
-./install.sh --offline    # 离线模式
-./install.sh --container  # 容器内安装
-./install.sh --help       # 查看帮助
+./scripts/nvim_sync.sh              # or: make nvim-sync
+NVIM_SYNC_TIMEOUT=1800 ./scripts/nvim_sync.sh
 ```
 
-### 更新
+**Clipboard over SSH.** When `SSH_TTY`/`SSH_CONNECTION` is set, Neovim enables
+OSC 52 (`vim.g.clipboard = "osc52"`) so `y` reaches the local clipboard even when the
+remote host has no clipboard provider. Requirements:
+
+* Terminal support — iTerm2 (enable *Applications in terminal may access clipboard*),
+  WezTerm, Kitty, Ghostty. Apple Terminal does not support OSC 52.
+* tmux — `set -g allow-passthrough on` (already in `tmux.conf.local`).
+* Fallback: hold Shift (Terminal.app) or Option (iTerm2) while dragging, or run
+  `:set mouse=` and use the terminal's native selection.
+
+**Themes.** TokyoNight is the default; Catppuccin and Gruvbox are preconfigured in
+`config/nvim/lua/plugins/colorscheme.lua` — uncomment the matching
+`{ "LazyVim/LazyVim", opts = { colorscheme = "..." } }` line.
+
+## Machine-specific settings
+
+| File | Purpose |
+|---|---|
+| `~/.zshrc.local` | sourced last by `.zshrc`; secrets/API keys live here (gitignored) |
+| `~/.p10k.zsh` | generated by `p10k configure` (gitignored) |
+| `config/nvim/lazy-lock.json` | generated by LazyVim (gitignored) |
+
+## Update and uninstall
 
 ```bash
-cd ~/code/dotfiles && git pull
-
-make update               # 更新所有
-
-# 或单独更新
-nvim +Lazy update         # Neovim 插件
-zsh -c 'source ~/.zim/zimfw.zsh update'  # Zimfw 模块
-cd ~/.tmux && git pull    # tmux 框架
+git pull
+make update          # zimfw modules + Lazy sync (+ Mason wait) + tmux framework
+make nvim-sync       # only Neovim plugins/Mason
+./scripts/uninstall.sh   # remove the symlinks this repo created
 ```
 
-### 添加新语言
-
-1. 在 `config/nvim/lua/plugins/` 创建 `<lang>.lua`
-2. 在 `config/nvim/lazyvim.json` 添加对应的 extras
-3. 可选：在 `scripts/` 添加安装脚本
-
-### 切换主题
-
-编辑 `config/nvim/lua/plugins/colorscheme.lua`：TokyoNight / Catppuccin / Gruvbox 预配置，取消注释对应行即可。
-
-### 机器特定设置
-
-- **p10k.zsh**: 安装后运行 `p10k configure`，此文件已 `.gitignore`
-- **lazy-lock.json**: LazyVim 自动生成，已 `.gitignore`
-- **~/.zshrc.local**: 在 `.zshrc` 末尾自动 source，放 API Key 等机器特定配置
-
-## 卸载
-
-```bash
-./scripts/uninstall.sh    # 仅移除符号链接
-```
-
-## 快捷键速查
+## Keymaps
 
 ### Neovim
-| 快捷键 | 功能 |
-|--------|------|
-| `<Space>ff` | 查找文件 |
-| `<Space>fg` | 全局搜索 |
-| `<Space>e` | 文件浏览器 |
-| `<Space>fy` | Yazi 文件管理器 |
-| `<C-h/j/k/l>` | 窗口/tmux 导航 |
-| `<C-/>` | 浮动终端 |
-| `gcc` | 切换行注释 |
-| `sa/sr/sd` | 添加/替换/删除包围符号 |
+
+| Key | Action |
+|---|---|
+| `<Space>ff` | find files |
+| `<Space>fg` | live grep |
+| `<Space>e` | file explorer |
+| `<Space>fy` | Yazi |
+| `<Space>cp` | Markdown preview (browser) |
+| `<Space>st` | todo picker (fzf-lua, falls back to Telescope) |
+| `<Space>xt` | todo in Trouble |
+| `<C-h/j/k/l>` | window / tmux navigation |
+| `<C-/>` | floating terminal |
+| `gcc` | toggle line comment |
+| `sa` / `sr` / `sd` | add / replace / delete surrounding |
 
 ### tmux
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+a` | 前缀键 |
-| `Ctrl+a \|` | 水平分割 |
-| `Ctrl+a -` | 垂直分割 |
-| `Ctrl+h/j/k/l` | 面板导航 (nvim 感知) |
-| `Alt+1~9` | 切换窗口 |
-| `Ctrl+a y` | 打开 Yazi |
+
+| Key | Action |
+|---|---|
+| `Ctrl+a` | prefix |
+| `Ctrl+a \|` | split horizontally |
+| `Ctrl+a -` | split vertically |
+| `Ctrl+h/j/k/l` | pane navigation (Neovim aware) |
+| `Alt+1~9` | switch window |
+| `Ctrl+a y` | open Yazi |
 
 ### fzf
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+R` | 搜索历史命令 |
-| `Ctrl+T` | 查找文件 |
-| `Alt+C` | 跳转目录 |
+
+| Key | Action |
+|---|---|
+| `Ctrl+R` | command history |
+| `Ctrl+T` | find files |
+| `Alt+C` | change directory |

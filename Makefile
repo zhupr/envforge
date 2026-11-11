@@ -41,8 +41,11 @@ uninstall: ## Remove symlinks
 
 update: ## Update zimfw + nvim plugins + tmux framework
 	zsh -c 'ZIM_HOME=~/.zim; source ~/.zim/zimfw.zsh update' 2>/dev/null || true
-	nvim --headless "+Lazy update" +qa 2>/dev/null || true
+	./scripts/nvim_sync.sh
 	cd ~/.tmux && git pull 2>/dev/null || true
+
+nvim-sync: ## Sync Neovim plugins and wait for Mason installs
+	./scripts/nvim_sync.sh
 
 download-offline: ## Download all packages for offline use
 	./scripts/download_offline.sh

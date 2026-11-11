@@ -35,6 +35,9 @@ return {
        ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝╚═╝  ╚═══╝
       ]]
       logo = string.rep("\n", 8) .. logo .. "\n\n"
+      -- LazyVim only pre-populates opts.config when the ui.dashboard-nvim
+      -- extra is enabled; create it so this spec works either way.
+      opts.config = opts.config or {}
       opts.config.header = vim.split(logo, "\n")
     end,
   },

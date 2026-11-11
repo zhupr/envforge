@@ -5,7 +5,7 @@ info "🐍 Setting up Python environment..."
 
 CONDA_DIR="$HOME/miniconda3"
 if [[ "${DO_OFFLINE:-false}" == true ]]; then
-  CONDA_SH="$(ls "$OFFLINE_DIR/conda"/Miniconda3-*.sh 2>/dev/null | head -n1)"
+  CONDA_SH="$(ls "$OFFLINE_DIR/conda"/Miniconda3-*.sh 2>/dev/null | head -n1 || true)"
   if [[ -n "$CONDA_SH" ]]; then
     bash "$CONDA_SH" -b -p "$CONDA_DIR" && ok "Miniconda offline installed"
   else
@@ -55,10 +55,12 @@ PIPCONF
 fi
 
 # Install Python dev tools
-info "Installing Python dev tools..."
 if [[ "${DO_OFFLINE:-false}" != true ]]; then
+  info "Installing Python dev tools..."
   "$CONDA_DIR/bin/pip" install --upgrade pip 2>/dev/null || true
   "$CONDA_DIR/bin/pip" install ruff pyright 2>/dev/null || true
+else
+  warn "ruff/pyright not bundled offline — install them later with pip if needed"
 fi
 
 ok "Python environment ready"

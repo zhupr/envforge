@@ -12,15 +12,12 @@ install_pkg() {
     return 0
   fi
   if [[ "${DO_OFFLINE:-false}" == true ]]; then
-    # Offline: prefer prebuilt binaries in offline/bins/
-    BIN="$(ls "$OFFLINE_DIR/bins"/$cmd_name* 2>/dev/null | head -n1)"
-    if [[ -n "$BIN" ]]; then
-      mkdir -p "$HOME/.local/bin" && cp "$BIN" "$HOME/.local/bin/$cmd_name" && chmod +x "$HOME/.local/bin/$cmd_name"
-      ok "$cmd_name offline installed from $BIN"
-    else
-      warn "$cmd_name missing (offline mode) — add offline/bins/$cmd_name* or run online once."
+    # Offline: prefer packaged artifacts in offline/bins/ (plain binary or archive)
+    if install_offline_bin "$cmd_name" "$HOME/.local/bin"; then
+      ok "$cmd_name offline installed"
+      return 0
     fi
-    return 0
+    warn "$cmd_name not in offline/bins/ — falling back to $PKG_MGR (needs network)"
   fi
   case "$PKG_MGR" in
     brew) brew install "$brew_name" ;;
@@ -87,33 +84,41 @@ elif [[ -d "$HOME/.local/share/fonts" ]] && ls "$HOME/.local/share/fonts/"*NerdF
 fi
 
 if [[ "$NERD_FONT_INSTALLED" == false ]]; then
-  FONT_NAME="MesloLGLNerdFont"
-  FONT_VER="v3.4.0"
-  FONT_ZIP="/tmp/${FONT_NAME}.zip"
+  FONT_ZIP="/tmp/MesloLGLNerdFont.zip"
+  OFFLINE_FONT="$(_offline_find fonts '*' 2>/dev/null | head -n1 || true)"
 
-  case "$PKG_MGR" in
-    brew)
-      brew install --cask font-meslo-lg-nerd-font 2>/dev/null || \
-        warn "Font install via brew failed, retry: brew install --cask font-meslo-lg-nerd-font"
-      ok "Meslo LG Nerd Font installed (via Homebrew)"
-      ;;
-    *)
-      download "https://github.com/ryanoasis/nerd-fonts/releases/download/${FONT_VER}/${FONT_NAME}.zip" \
-        "$FONT_ZIP" || {
-        warn "Font download failed. Manual install:"
-        warn "  1. https://github.com/ryanoasis/nerd-fonts/releases"
-        warn "  2. Download ${FONT_NAME}.zip"
-        warn "  3. Unzip into ~/.local/share/fonts/"
-      }
-      if [[ -f "$FONT_ZIP" ]]; then
-        mkdir -p "$HOME/.local/share/fonts"
-        unzip -o "$FONT_ZIP" -d "$HOME/.local/share/fonts" >/dev/null 2>&1
-        fc-cache -fv >/dev/null 2>&1
-        rm -f "$FONT_ZIP"
-        ok "Meslo LG Nerd Font installed"
-      fi
-      ;;
-  esac
+  if [[ -n "${OFFLINE_FONT:-}" && -f "$OFFLINE_FONT" ]]; then
+    info "Using offline font package $OFFLINE_FONT"
+    mkdir -p "$HOME/.local/share/fonts"
+    unzip -oq "$OFFLINE_FONT" -d "$HOME/.local/share/fonts" >/dev/null 2>&1 || \
+      warn "Could not unpack $OFFLINE_FONT"
+    fc-cache -fv >/dev/null 2>&1 || true
+    ok "Nerd Font installed from offline package"
+  else
+    case "$PKG_MGR" in
+      brew)
+        brew install --cask font-meslo-lg-nerd-font 2>/dev/null || \
+          warn "Font install via brew failed, retry: brew install --cask font-meslo-lg-nerd-font"
+        ok "Meslo LG Nerd Font installed (via Homebrew)"
+        ;;
+      *)
+        # Resolve the current release instead of pinning a tag that may 404.
+        FONT_URL="$(api_asset_url ryanoasis/nerd-fonts 'MesloLGLNerdFont\.zip')"
+        if [[ -n "$FONT_URL" ]] && download "$FONT_URL" "$FONT_ZIP"; then
+          mkdir -p "$HOME/.local/share/fonts"
+          unzip -oq "$FONT_ZIP" -d "$HOME/.local/share/fonts" >/dev/null 2>&1
+          fc-cache -fv >/dev/null 2>&1 || true
+          rm -f "$FONT_ZIP"
+          ok "Meslo LG Nerd Font installed"
+        else
+          warn "Font download failed. Manual install:"
+          warn "  1. https://github.com/ryanoasis/nerd-fonts/releases"
+          warn "  2. Download MesloLGLNerdFont.zip"
+          warn "  3. Unzip into ~/.local/share/fonts/"
+        fi
+        ;;
+    esac
+  fi
 fi
 
 echo ""

@@ -69,20 +69,22 @@ if [[ $# -eq 0 ]]; then
   DO_ZSH=true; DO_NVIM=true; DO_TMUX=true; DO_CPP=true
   DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true; DO_HERDR=true; DO_OMP=true
 else
+  SELECTED=false
   for arg in "$@"; do
     case "$arg" in
       --all)       DO_ZSH=true; DO_NVIM=true; DO_TMUX=true; DO_CPP=true
-                   DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true; DO_HERDR=true; DO_OMP=true ;;
-      --zsh)       DO_ZSH=true ;;
-      --nvim)      DO_NVIM=true ;;
-      --tmux)      DO_TMUX=true ;;
-      --cpp)       DO_CPP=true ;;
-      --python)    DO_PYTHON=true ;;
-      --go)        DO_GO=true ;;
-      --tools)     DO_TOOLS=true ;;
-      --rust)      DO_RUST=true ;;
-      --herdr)     DO_HERDR=true ;;
-      --omp)       DO_OMP=true ;;
+                   DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true; DO_HERDR=true; DO_OMP=true
+                   SELECTED=true ;;
+      --zsh)       DO_ZSH=true; SELECTED=true ;;
+      --nvim)      DO_NVIM=true; SELECTED=true ;;
+      --tmux)      DO_TMUX=true; SELECTED=true ;;
+      --cpp)       DO_CPP=true; SELECTED=true ;;
+      --python)    DO_PYTHON=true; SELECTED=true ;;
+      --go)        DO_GO=true; SELECTED=true ;;
+      --tools)     DO_TOOLS=true; SELECTED=true ;;
+      --rust)      DO_RUST=true; SELECTED=true ;;
+      --herdr)     DO_HERDR=true; SELECTED=true ;;
+      --omp)       DO_OMP=true; SELECTED=true ;;
       --interactive|-i) DO_INTERACTIVE=true ;;
       --offline)   DO_OFFLINE=true ;;
       --container) ;;  # already handled above
@@ -110,6 +112,14 @@ else
       *)           warn "Unknown flag: $arg" ;;
     esac
   done
+
+  # `--offline` only selects the install strategy; on its own it used to install
+  # nothing at all. Treat it as "all components" unless components were named.
+  if [[ "$DO_OFFLINE" == true && "$SELECTED" == false && "$DO_INTERACTIVE" == false ]]; then
+    info "--offline without component flags: installing all components"
+    DO_ZSH=true; DO_NVIM=true; DO_TMUX=true; DO_CPP=true
+    DO_PYTHON=true; DO_GO=true; DO_TOOLS=true; DO_RUST=true; DO_HERDR=true; DO_OMP=true
+  fi
 fi
 
 # ---- helper: symlink with backup ----

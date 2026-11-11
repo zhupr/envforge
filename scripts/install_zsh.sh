@@ -24,7 +24,7 @@ fi
 # Install zimfw
 ZIM_HOME="${ZDOTDIR:-$HOME}/.zim"
 if [[ "${DO_OFFLINE:-false}" == true ]]; then
-  ZIMFW_SRC="$(ls "$OFFLINE_DIR/zsh"/zimfw.zsh "$OFFLINE_DIR/nvim"/zimfw.zsh 2>/dev/null | head -n1)"
+  ZIMFW_SRC="$(ls "$OFFLINE_DIR/zsh"/zimfw.zsh "$OFFLINE_DIR/nvim"/zimfw.zsh 2>/dev/null | head -n1 || true)"
   if [[ -n "$ZIMFW_SRC" ]]; then
     mkdir -p "$ZIM_HOME" && copy_tree "$ZIMFW_SRC" "$ZIM_HOME/zimfw.zsh" 2>/dev/null || cp "$ZIMFW_SRC" "$ZIM_HOME/zimfw.zsh"
     ok "zimfw offline copied from $ZIMFW_SRC"
@@ -33,7 +33,10 @@ if [[ "${DO_OFFLINE:-false}" == true ]]; then
   fi
 elif [[ ! -e "$ZIM_HOME/zimfw.zsh" ]]; then
   info "Installing zimfw..."
-  download "https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh" \
+  # curl -o cannot create parent directories; ~/.zim may not exist yet.
+  mkdir -p "$ZIM_HOME"
+  # zimfw has no release assets; master's zimfw.zsh is the installer.
+  download "https://raw.githubusercontent.com/zimfw/zimfw/master/zimfw.zsh" \
     "$ZIM_HOME/zimfw.zsh" || {
     warn "Download failed. Check your network or set GITHUB_MIRROR."
     warn "  export GITHUB_MIRROR=https://ghfast.top/https://github.com"

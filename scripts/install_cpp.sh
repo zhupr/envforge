@@ -4,17 +4,23 @@
 info "⚙️  Setting up C++ toolchain..."
 
 if [[ "${DO_OFFLINE:-false}" == true ]]; then
-  VCPKG_TAR="$(ls "$OFFLINE_DIR/nvim"/vcpkg*.tar.gz "$OFFLINE_DIR/cpp"/vcpkg*.tar.gz 2>/dev/null | head -n1)"
+  VCPKG_TAR="$(ls "$OFFLINE_DIR/nvim"/vcpkg*.tar.gz "$OFFLINE_DIR/cpp"/vcpkg*.tar.gz 2>/dev/null | head -n1 || true)"
   if [[ -n "$VCPKG_TAR" ]]; then
     mkdir -p "$(dirname "${VCPKG_ROOT:-$HOME/.local/share/vcpkg}")"
     mkdir -p "${VCPKG_ROOT:-$HOME/.local/share/vcpkg}"
     tar xzf "$VCPKG_TAR" -C "${VCPKG_ROOT:-$HOME/.local/share/vcpkg}" --strip-components=1
     ok "vcpkg offline installed"
   else
-    warn "vcpkg tarball missing in offline/ — skipping vcpkg (offline mode)."
+    warn "vcpkg tarball missing in offline/ — skipping vcpkg."
   fi
-  ok "C++ system toolchain skipped offline (brew/apt needs network); use preinstalled clang/cmake or add to offline/bins/"
-  DO_CPP_OFFLINE_DONE=true
+  # System packages have no offline bundle; still attempt them so a machine with
+  # a reachable mirror (or a warm apt cache) is not blocked by offline mode.
+  if command -v clangd &>/dev/null && command -v cmake &>/dev/null; then
+    ok "clangd/cmake already available — no package install needed"
+    DO_CPP_OFFLINE_DONE=true
+  else
+    warn "clangd/cmake missing — attempting $PKG_MGR (may fail if truly offline)"
+  fi
 fi
 if [[ "${DO_CPP_OFFLINE_DONE:-false}" != true ]]; then
 case "$PKG_MGR" in

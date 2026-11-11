@@ -16,6 +16,9 @@ set -g history-limit 50000
 set -g mouse on
 set -g focus-events on
 set -g set-clipboard on
+# Allow OSC 52 (and other escape sequences) to reach the outer terminal, so
+# yanking inside Neovim over SSH copies to the local clipboard.
+set -g allow-passthrough on
 set -sg escape-time 0
 set -g display-time 3000
 

@@ -82,9 +82,10 @@ return {
     },
   },
 
-  -- 缩进线
+  -- 缩进线（v3 的模块名是 ibl，必须显式声明 main，否则 Lazy 按仓库名推断 v2 模块）
   {
     "lukas-reineke/indent-blankline.nvim",
+    main = "ibl",
     opts = {
       indent = { char = "│", tab_char = "│" },
       scope = { enabled = true },
